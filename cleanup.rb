@@ -64,7 +64,7 @@ config.each do |path, expressions|
     remove_file = false
     begin
       f = File.new(cur_path)
-      ctime = Time.parse(`mdls -name kMDItemFSCreationDate -raw #{cur_path}`) or f.ctime         # osx fallback
+      ctime = Time.parse(`mdls -name kMDItemFSCreationDate -raw "#{cur_path}"`) or f.ctime         # osx fallback
       atime = f.atime
       mtime = f.mtime
     rescue 
