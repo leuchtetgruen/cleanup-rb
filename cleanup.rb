@@ -21,6 +21,19 @@ def newer_than_age_description_does_match(description, time)
   return time > timestamp_from_age_description(description)
 end
 
+def filesize_from_description(description)
+  size = 0
+  size = description.match(/([0-9]*) B/i)[1].to_i if /[0-9]* B/i.match(description)
+  size = description.match(/([0-9]*) KB/i)[1].to_i * 1024 if /[0-9]* KB/i.match(description)
+  size = description.match(/([0-9]*) MB/i)[1].to_i * 1048576 if /[0-9]* MB/i.match(description)  
+  size = description.match(/([0-9]*) GB/i)[1].to_i * 1073741824 if /[0-9]* GB/i.match(description)
+  size = description.match(/([0-9]*) TB/i)[1].to_i * 1099511627776 if /[0-9]* TB/i.match(description)      
+  return size
+end
+
+def check_condition(condition, value)
+end
+
 
 test_run = ((ARGV.length > 0) and (ARGV[0]=="--test"))
 
@@ -40,9 +53,13 @@ config.each do |path, expressions|
   recursive = expressions['recursive']
   expressions.delete("recursive")
   
-  Find.find("#{path}/") do |cur_path|
+  expressions[".*"] = expressions["all"] if expressions["all"]
+  expressions.delete("all")
+  
+  Find.find("#{path}/") do |cur_path|    
     next if (cur_path == "#{path}/")
     Find.prune if (FileTest.directory?(cur_path) and !recursive)
+
 
     remove_file = false
     begin
@@ -62,13 +79,28 @@ config.each do |path, expressions|
         if (conditions == true) then
           remove_file = true
         else 
-          remove_file = true if conditions.has_key?("older_than") and older_than_age_description_does_match(conditions["older_than"], ctime)
-          remove_file = true if conditions.has_key?("not_accessed_in") and older_than_age_description_does_match(conditions["not_accessed_in"], atime)
-          remove_file = true if conditions.has_key?("not_modified_in") and older_than_age_description_does_match(conditions["not_modified_in"], mtime)
+          check = lambda { |condition, value|
+            ret = false
+            ret = true if (condition == "older_than") and older_than_age_description_does_match(value, ctime)
+            ret = true if (condition == "not_accessed_in") and older_than_age_description_does_match(value, atime)
+            ret = true if (condition == "not_modified_in") and older_than_age_description_does_match(value, mtime)
+            
+            ret = true if (condition == "newer_than") and newer_than_age_description_does_match(value, ctime)
+            ret = true if (condition == "accessed_in") and newer_than_age_description_does_match(value, atime)
+            ret = true if (condition == "modified_in") and newer_than_age_description_does_match(value, mtime)
 
-          remove_file = true if conditions.has_key?("newer_than") and newer_than_age_description_does_match(conditions["newer_than"], ctime)
-          remove_file = true if conditions.has_key?("accessed_in") and newer_than_age_description_does_match(conditions["accessed_in"], atime)
-          remove_file = true if conditions.has_key?("modified_in") and newer_than_age_description_does_match(conditions["modified_in"], mtime)          
+            ret = true if (condition == "size_exceeds") and (File.size(cur_path) > filesize_from_description(value))
+            ret = true if (condition == "size_is_below") and (File.size(cur_path) < filesize_from_description(value))            
+            ret = true if (condition == "must_meet_all_conditions") and (value == true)
+            
+            ret
+          }
+          
+          if conditions.has_key?("must_meet_all_conditions") and (conditions["must_meet_all_conditions"] == true) then
+            remove_file = conditions.all?(&check) 
+          else
+            remove_file = conditions.any?(&check)
+          end
         end
       end
     end

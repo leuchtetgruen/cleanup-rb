@@ -1,5 +1,9 @@
-/tmp:
-    recursive: false
+/tmp/foo:
+    recursive: true
     com.*:
         older_than: 5 days
     test.*: true 
+    all: 
+        must_meet_all_conditions: true
+        newer_than: 2 years
+        size_is_below: 4 B
