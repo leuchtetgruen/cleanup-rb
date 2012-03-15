@@ -1,0 +1,9 @@
+This ruby script will delete certain files if they meet certain criteria. It can be configured with a file like this:
+
+/tmp:
+    recursive: false
+    com.*:
+        older_than: 5 days
+    test.*: true
+
+This file will either be ~/.cleanup or a file named cleanup.yml in the local directory

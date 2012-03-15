@@ -1,0 +1,5 @@
+/tmp:
+    recursive: false
+    com.*:
+        older_than: 5 days
+    test.*: true 
